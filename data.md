@@ -69,10 +69,10 @@ C =  p[0] * 2
 T = (p[1] + C/2)/c
 S =  p[2] / c
 
-print(p)
-print("Compute  cost     C = {:.3f} core-hour per correlation ({:.3f} core-min)".format(C, C*60))
-print("Transfer overhead T = {:.3f} hour per data stream ({:.3f} sec)".format(T, T*3600))
-print("Startup  overhead S = {:.3f} hour per run ({:.3f} sec)".format(S, S*3600))
+print(f"Fit: {p}")
+print(f"Compute  cost     C = {C:.3f} core-hour per correlation ({C*60:.3f} core-min)")
+print(f"Transfer overhead T = {T:.3f} hour per data stream ({T*3600:.3f} sec)")
+print(f"Startup  overhead S = {S:.3f} hour per run ({S*3600:.3f} sec)")
 ```
 
 We then overplot the model with the data.
@@ -132,4 +132,22 @@ ax2.set_ylim(y0 * 15, y1 * 15)
 ax2.set_ylabel("Scaled Cost of 5min scans [core-hour]")
 
 fig.savefig("contributions.pdf")
+```
+
+## Normalize the Model Constants
+
+Based on the above fitting, assuming the Google Cloud system (CPU, RAM, network, etc) performance are similar to what we will be able to get for a space VLBI missions, we can obtain the cost constants:
+
+```python
+bandwidth    = 32 # in Gbps
+quantization = 3  # in bit
+scanlength   = 20 # in second
+
+comp = C / scanlength / (bandwidth / quantization) # computing cost of correlation in core-hour per second per giga-sample
+
+print(f"Compute cost: comp = {comp:.6f} core-hour per second per giga-sample)")
+```
+
+```python
+
 ```
