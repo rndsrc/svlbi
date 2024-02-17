@@ -15,6 +15,21 @@ jupyter:
 
 # Space VLBI DataOps
 
+This notebook provides a simple model of data pathway for space VLBI missions.
+We use benchmark result from cloud correlation and EHT's 2017 data to estimate the data caching, throughput, and computation requirements.
+
+We start by important some standard python packages.
+
+```python
+%load_ext autoreload
+%autoreload 2
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+import ehtim as eh
+```
+
 ```python
 
 ```
