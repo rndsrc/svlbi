@@ -148,6 +148,128 @@ comp = C / scanlength / (bandwidth / quantization) # computing cost of correlati
 print(f"Compute cost: comp = {comp:.6f} core-hour per second per giga-sample)")
 ```
 
+## Data Model for Space VLBI
+
+```python
+#obs = eh.obsdata.load_uvfits('m87facing_fullcovonm87.uvfits')
+#obs = eh.obsdata.load_uvfits('m87facing_fullcovonsgra.uvfits')
+#obs = eh.obsdata.load_uvfits('sgratilted_fullcovonm87.uvfits')
+obs = eh.obsdata.load_uvfits('sgratilted_fullcovonsgra.uvfits')
+
+np.unique(np.concatenate([obs.data['t1'], obs.data['t2']]))
+```
+
+```python
+space='compromi'
+
+S = (obs.data['t1'] == space) | (obs.data['t2'] == space)
+G = ~S
+
+U = obs.data['u'] / 1e9
+V = obs.data['v'] / 1e9
+
+plt.scatter( U[S],  V[S], s=1, color='b')
+plt.scatter(-U[S], -V[S], s=1, color='b')
+plt.scatter( U[G],  V[G], s=1, color='g')
+plt.scatter(-U[G], -V[G], s=1, color='g')
+
+plt.gca().set_aspect('equal')
+```
+
+```python
+assert len(np.unique(obs.data['tint'])) == 1
+
+tint = np.unique(obs.data['tint'])[0]
+
+T  = obs.data['time']
+TT = np.unique(T)
+TT = np.insert(TT, 0, TT[0]-TT[1])
+```
+
+```python
+Bs = 96  # Gbps
+Bg = 192 # Gbps
+Qs = 1
+Qg = 2
+
+assert Bs/Qs == Bg/Qg
+
+Ds, Dg = [0], [0]
+DS, DG = [0], [0]
+CA     = [0]
+
+for i, t in enumerate(TT[1:]):
+    print(i)
+    
+    data  = obs.data[T == t]
+    array = np.unique(np.concatenate([data['t1'], data['t2']]))
+
+    if space in array:
+        Ns = 1
+        Ng = len(array) - 1
+    else:
+        Ns  = 0
+        Ng = len(array)
+
+    S  = (data['t1'] == space) | (data['t2'] == space)
+    G  = ~S
+    NS = np.sum(S)
+    NG = np.sum(G)
+    assert NS == Ns * Ng # assuming at most one space station
+    assert NG == Ng * (Ng - 1) // 2
+
+    Ds.append(Ds[-1] + Ns * Bs * tint)
+    Dg.append(Dg[-1] + Ng * Bg * tint)
+
+    CA.append(comp * tint / (TT[i+1]-TT[i]) * (Bg/Qg) * (NS+NG)*(NS+NG-1)/2 / 1e3)
+
+    ################################
+    
+    #fig, axes = plt.subplots(1,2, figsize=(12,5))
+
+    fig, axd = plt.subplot_mosaic([
+        ['l', 'tr'],
+        ['l', 'br']
+    ], figsize=(12, 5), layout="constrained")
+    
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+
+    U = data['u'] / 1e9
+    V = data['v'] / 1e9
+
+    axd['l'].scatter( obs.data[T < t]['u']/1e9,  obs.data[T < t]['v']/1e9, s=1, color='k', alpha=0.2)
+    axd['l'].scatter(-obs.data[T < t]['u']/1e9, -obs.data[T < t]['v']/1e9, s=1, color='k', alpha=0.2)
+    
+    axd['l'].scatter( U[S],  V[S], color='b')
+    axd['l'].scatter(-U[S], -V[S], color='b')
+    axd['l'].scatter( U[G],  V[G], color='g')
+    axd['l'].scatter(-U[G], -V[G], color='g')
+
+    axd['l'].set_aspect('equal')
+    axd['l'].set_xlim(-25,25)
+    axd['l'].set_ylim(-25,25)
+    axd['l'].set_xlabel('u (G$\lambda$)')
+    axd['l'].set_ylabel('v (G$\lambda$)')
+
+    DS = np.array(Ds) / 8 / 1024 / 1024
+    DG = np.array(Dg) / 8 / 1024 / 1024
+    N  = len(DS)
+    
+    axd['tr'].plot(TT[:N], DS,      label='space')
+    axd['tr'].plot(TT[:N], DG,      label='ground')
+    axd['tr'].plot(TT[:N], DS + DG, label='all')
+    axd['tr'].set_xlabel('Time (hr)')
+    axd['tr'].set_ylabel('Data Volume (PB)')
+    axd['tr'].legend()
+
+    axd['br'].plot(TT[:N], CA)
+    axd['br'].set_xlabel('Time (hr)')
+    axd['br'].set_ylabel('Cluster size at 1x (1k-core)')
+
+    fig.savefig(f'frames/{i+1:04d}.png')
+    plt.close()
+```
+
 ```python
 
 ```
